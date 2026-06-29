@@ -1,23 +1,13 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "api/key.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    }
+    { "src": "api/key.js", "use": "@vercel/node" },
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "fleet.html", "use": "@vercel/static" }
   ],
   "routes": [
-    {
-      "src": "/api/key",
-      "dest": "/api/key.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+    { "src": "/api/key", "dest": "/api/key.js" },
+    { "src": "/fleet.html", "dest": "/fleet.html" },
+    { "src": "/", "dest": "/index.html" }
   ]
 }
