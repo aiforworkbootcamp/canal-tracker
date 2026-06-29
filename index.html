@@ -86,7 +86,7 @@
 </header>
 <div id="viewnav">
   <a class="navbtn active" href="/">🌉 Canal Tracker</a>
-  <a class="navbtn" href="/fleet.html">🗽 NY Harbor</a>
+  <a class="navbtn" href="/fleet.html">🗺 Fleet View</a>
 </div>
 <div id="banner">
   <span class="blabel">🌉 Bridge ETA</span>
@@ -114,7 +114,7 @@
 <script>
 const RR={lat:41.74213231517865,lng:-70.61402319920383};
 const CANAL=[[41.7280,-70.6600],[41.7330,-70.6420],[41.7378,-70.6250],[41.74213231517865,-70.61402319920383],[41.7440,-70.6050],[41.747830909691544,-70.58977958719797],[41.7530,-70.5750],[41.7620,-70.5620],[41.7700,-70.5530],[41.775886880052774,-70.5436722912201],[41.7790,-70.5250],[41.7840,-70.5050]];
-const BBOX=[[39.50,-74.50],[42.50,-69.50]];
+const BBOX=[[38.50,-77.00],[42.50,-69.50]];
 const WL={
   "247999000":{name:"Amerigo Vespucci",flag:"🇮🇹",country:"Italy",type:"Full-Rigged Ship"},
   "261148000":{name:"Dar Mlodziezy",flag:"🇵🇱",country:"Poland",type:"Full-Rigged Ship"},
@@ -130,6 +130,10 @@ const WL={
   "735059037":{name:"Guayas",flag:"🇪🇨",country:"Ecuador",type:"Barque"},
   "770576100":{name:"Capitan Miranda",flag:"🇺🇾",country:"Uruguay",type:"Schooner"},
   "246011000":{name:"Oosterschelde",flag:"🇳🇱",country:"Netherlands",type:"Topsail Schooner"},
+  "265404000":{name:"HMS Gladan",flag:"🇸🇪",country:"Sweden",type:"Schooner"},
+  "228796000":{name:"FS Belle Poule",flag:"🇫🇷",country:"France",type:"Topsail Schooner"},
+  "254711000":{name:"Tuiga",flag:"🇲🇨",country:"Monaco",type:"Gaff Schooner"},
+  "211237490":{name:"Walross 4",flag:"🇩🇪",country:"Germany",type:"Brigantine"},
   "338327000":{name:"Denis Sullivan",flag:"🇺🇸",country:"USA",type:"Schooner"},
   "368275660":{name:"Ernestina-Morrissey",flag:"🇺🇸",country:"USA",type:"Schooner"},
   "368189000":{name:"Harvey Gamage",flag:"🇺🇸",country:"USA",type:"Schooner"},
@@ -139,6 +143,9 @@ const WL={
   "303498000":{name:"Schooner Bowdoin",flag:"🇺🇸",country:"USA",type:"Schooner"},
   "367004000":{name:"Kalmar Nyckel",flag:"🇺🇸",country:"USA",type:"Pinnace"},
   "367066790":{name:"Elissa",flag:"🇺🇸",country:"USA",type:"Barque"},
+  "303615000":{name:"Pride of Baltimore",flag:"🇺🇸",country:"USA",type:"Topsail Schooner"},
+  "367350650":{name:"Lady Maryland",flag:"🇺🇸",country:"USA",type:"Schooner"},
+  "367784530":{name:"Angelique",flag:"🇺🇸",country:"USA",type:"Schooner"},
 };
 const NAVS={0:"Under way",1:"At anchor",2:"Not under command",3:"Restricted",5:"Moored",8:"Sailing"};
 let map,socket;
@@ -190,7 +197,7 @@ function refreshBanner(){
   const el=document.getElementById('bannerinner');
   if(!near.length){el.className='nomsg';el.textContent='No ships in canal approach zone…';return;}
   el.className='';el.style.cssText='display:flex;gap:8px;align-items:center';
-  el.innerHTML=near.slice(0,8).map(s=>{const soon=s.d.eta.mins<60;return'<div class="chip" onclick="openPanel(\''+s.d.mmsi+'\')"><span>'+s.d.flag+'</span><span class="cname">'+s.d.name.split(' ')[0]+'</span><span class="ceta'+(soon?' soon':'')+'">'+fmtM(s.d.eta.mins)+'</span></div>';}).join('');
+  el.innerHTML=near.slice(0,8).map(s=>{const soon=s.d.eta.mins<60;return'<div class="chip" onclick="openPanel(\''+s.d.mmsi+'\')">'+'<span>'+s.d.flag+'</span><span class="cname">'+s.d.name.split(' ')[0]+'</span><span class="ceta'+(soon?' soon':'')+'">'+fmtM(s.d.eta.mins)+'</span></div>';}).join('');
 }
 function openPanel(mmsi){
   const s=ships[mmsi]&&ships[mmsi].d;if(!s)return;
