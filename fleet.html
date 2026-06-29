@@ -44,8 +44,8 @@
   .sval{font-size:18px;color:var(--foam);font-weight:bold;font-family:monospace}
   .sunit{font-size:11px;color:var(--wake);margin-left:2px}
   .bostonbadge{display:inline-block;margin-top:10px;font-family:monospace;font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(200,150,62,.15);border:1px solid var(--gold);color:var(--goldlt)}
-  .wikibtn{display:inline-block;margin-top:8px;margin-left:6px;font-family:monospace;font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(74,158,202,.12);border:1px solid rgba(74,158,202,.4);color:var(--wake);text-decoration:none}
-  .wikibtn:hover{background:rgba(74,158,202,.25)}
+  .infobtn{display:inline-block;margin-top:8px;margin-left:6px;font-family:monospace;font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(74,158,202,.12);border:1px solid rgba(74,158,202,.4);color:var(--wake);text-decoration:none}
+  .infobtn:hover{background:rgba(74,158,202,.25)}
   #loading{position:fixed;inset:0;background:var(--navy);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
   .load-title{font-size:22px;color:var(--goldlt);font-weight:bold}
   .load-sub{font-size:13px;color:var(--wake);font-family:monospace}
@@ -117,36 +117,36 @@
 <script>
 const BBOX=[[38.50,-77.00],[42.50,-69.50]];
 const WL={
-  "247999000":{name:"Amerigo Vespucci",flag:"🇮🇹",country:"Italy",type:"Full-Rigged Ship",boston:true,wiki:"Amerigo_Vespucci_(ship)"},
-  "261148000":{name:"Dar Mlodziezy",flag:"🇵🇱",country:"Poland",type:"Full-Rigged Ship",boston:true,wiki:"Dar_M%C5%82odzie%C5%BCy"},
-  "701000001":{name:"ARA Libertad",flag:"🇦🇷",country:"Argentina",type:"Full-Rigged Ship",boston:true,wiki:"ARA_Libertad"},
-  "303990000":{name:"USCGC Eagle",flag:"🇺🇸",country:"USA",type:"Barque",boston:true,wiki:"USCGC_Eagle_(WIX-327)"},
-  "725019006":{name:"Esmeralda",flag:"🇨🇱",country:"Chile",type:"Barquentine",boston:true,wiki:"Chilean_training_ship_Esmeralda_(BE-43)"},
-  "710428000":{name:"Cisne Branco",flag:"🇧🇷",country:"Brazil",type:"Full-Rigged Ship",boston:true,wiki:"Cisne_Branco"},
-  "760105000":{name:"BAP Union",flag:"🇵🇪",country:"Peru",type:"4-Mast Barque",boston:true,wiki:"BAP_Uni%C3%B3n_(BEV-161)"},
-  "263141000":{name:"NRP Sagres",flag:"🇵🇹",country:"Portugal",type:"Barque",boston:true,wiki:"NRP_Sagres_(1937)"},
-  "211210280":{name:"Gorch Fock",flag:"🇩🇪",country:"Germany",type:"Barque",boston:true,wiki:"German_training_ship_Gorch_Fock_(1958)"},
-  "264800057":{name:"Mircea",flag:"🇷🇴",country:"Romania",type:"Barque",boston:true,wiki:"Romanian_training_ship_Mircea"},
-  "224977000":{name:"JS de Elcano",flag:"🇪🇸",country:"Spain",type:"Topsail Schooner",boston:true,wiki:"Juan_Sebasti%C3%A1n_de_Elcano_(ship)"},
-  "735059037":{name:"Guayas",flag:"🇪🇨",country:"Ecuador",type:"Barque",boston:false,wiki:"BAE_Guayas"},
-  "770576100":{name:"Capitan Miranda",flag:"🇺🇾",country:"Uruguay",type:"Schooner",boston:false,wiki:"ROU_Capitan_Miranda"},
-  "246011000":{name:"Oosterschelde",flag:"🇳🇱",country:"Netherlands",type:"Topsail Schooner",boston:true,wiki:"Oosterschelde_(ship)"},
-  "265404000":{name:"HMS Gladan",flag:"🇸🇪",country:"Sweden",type:"Schooner",boston:true,wiki:"HMS_Gladan"},
-  "228796000":{name:"FS Belle Poule",flag:"🇫🇷",country:"France",type:"Topsail Schooner",boston:true,wiki:"French_training_ship_Belle_Poule"},
-  "254711000":{name:"Tuiga",flag:"🇲🇨",country:"Monaco",type:"Gaff Schooner",boston:false,wiki:"Tuiga"},
-  "211237490":{name:"Walross 4",flag:"🇩🇪",country:"Germany",type:"Brigantine",boston:false,wiki:null},
-  "338327000":{name:"Denis Sullivan",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,wiki:"Denis_Sullivan_(schooner)"},
-  "368275660":{name:"Ernestina-Morrissey",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,wiki:"Ernestina-Morrissey"},
-  "368189000":{name:"Harvey Gamage",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,wiki:null},
-  "366325930":{name:"Tabor Boy",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,wiki:null},
-  "367414870":{name:"Liberty Clipper",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,wiki:null},
-  "369603000":{name:"Lynx",flag:"🇺🇸",country:"USA",type:"Topsail Schooner",boston:true,wiki:"Lynx_(tall_ship)"},
-  "303498000":{name:"Schooner Bowdoin",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,wiki:"Bowdoin_(schooner)"},
-  "367004000":{name:"Kalmar Nyckel",flag:"🇺🇸",country:"USA",type:"Pinnace",boston:true,wiki:"Kalmar_Nyckel"},
-  "367066790":{name:"Elissa",flag:"🇺🇸",country:"USA",type:"Barque",boston:false,wiki:"Elissa_(ship)"},
-  "303615000":{name:"Pride of Baltimore",flag:"🇺🇸",country:"USA",type:"Topsail Schooner",boston:true,wiki:"Pride_of_Baltimore"},
-  "367350650":{name:"Lady Maryland",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,wiki:null},
-  "367784530":{name:"Angelique",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,wiki:null},
+  "247999000":{name:"Amerigo Vespucci",flag:"🇮🇹",country:"Italy",type:"Full-Rigged Ship",boston:true,url:"https://tourvespucci.it/en/the-ship/"},
+  "261148000":{name:"Dar Mlodziezy",flag:"🇵🇱",country:"Poland",type:"Full-Rigged Ship",boston:true,url:"https://umg.edu.pl/en/dar-mlodziezy"},
+  "701000001":{name:"ARA Libertad",flag:"🇦🇷",country:"Argentina",type:"Full-Rigged Ship",boston:true,url:"https://en.wikipedia.org/wiki/ARA_Libertad"},
+  "303990000":{name:"USCGC Eagle",flag:"🇺🇸",country:"USA",type:"Barque",boston:true,url:"https://uscga.edu/mission/eagle/about-eagle/"},
+  "725019006":{name:"Esmeralda",flag:"🇨🇱",country:"Chile",type:"Barquentine",boston:true,url:"https://en.wikipedia.org/wiki/Chilean_barquentine_Esmeralda"},
+  "710428000":{name:"Cisne Branco",flag:"🇧🇷",country:"Brazil",type:"Full-Rigged Ship",boston:true,url:"https://en.wikipedia.org/wiki/Cisne_Branco"},
+  "760105000":{name:"BAP Union",flag:"🇵🇪",country:"Peru",type:"4-Mast Barque",boston:true,url:"https://en.wikipedia.org/wiki/BAP_Uni%C3%B3n"},
+  "263141000":{name:"NRP Sagres",flag:"🇵🇹",country:"Portugal",type:"Barque",boston:true,url:"https://www.marinha.pt/en/os_meios/veleiros/Pages/nrp-sagres.aspx"},
+  "211210280":{name:"Gorch Fock",flag:"🇩🇪",country:"Germany",type:"Barque",boston:true,url:"https://en.wikipedia.org/wiki/German_training_ship_Gorch_Fock_(1958)"},
+  "264800057":{name:"Mircea",flag:"🇷🇴",country:"Romania",type:"Barque",boston:true,url:"https://en.wikipedia.org/wiki/Mircea_(ship)"},
+  "224977000":{name:"JS de Elcano",flag:"🇪🇸",country:"Spain",type:"Topsail Schooner",boston:true,url:"https://en.wikipedia.org/wiki/Juan_Sebasti%C3%A1n_de_Elcano_(ship)"},
+  "735059037":{name:"Guayas",flag:"🇪🇨",country:"Ecuador",type:"Barque",boston:false,url:"https://en.wikipedia.org/wiki/BAE_Guayas"},
+  "770576100":{name:"Capitan Miranda",flag:"🇺🇾",country:"Uruguay",type:"Schooner",boston:false,url:"https://en.wikipedia.org/wiki/ROU_Capit%C3%A1n_Miranda"},
+  "246011000":{name:"Oosterschelde",flag:"🇳🇱",country:"Netherlands",type:"Topsail Schooner",boston:true,url:"https://www.dutchtallship.com/oosterschelde/"},
+  "265404000":{name:"HMS Gladan",flag:"🇸🇪",country:"Sweden",type:"Schooner",boston:true,url:"https://en.wikipedia.org/wiki/HMS_Gladan"},
+  "228796000":{name:"FS Belle Poule",flag:"🇫🇷",country:"France",type:"Topsail Schooner",boston:true,url:"https://en.wikipedia.org/wiki/French_schooner_Belle_Poule"},
+  "254711000":{name:"Tuiga",flag:"🇲🇨",country:"Monaco",type:"Gaff Schooner",boston:false,url:"https://yacht-club-monaco.mc/en/club/history/"},
+  "211237490":{name:"Walross 4",flag:"🇩🇪",country:"Germany",type:"Brigantine",boston:false,url:null},
+  "338327000":{name:"Denis Sullivan",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,url:"https://en.wikipedia.org/wiki/Denis_Sullivan_(schooner)"},
+  "368275660":{name:"Ernestina-Morrissey",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,url:"https://www.ernestina.org/about/about-ernestina/history/"},
+  "368189000":{name:"Harvey Gamage",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,url:"https://en.wikipedia.org/wiki/Harvey_Gamage_(schooner)"},
+  "366325930":{name:"Tabor Boy",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,url:"https://www.taboracademy.org/school-by-the-sea/ssv-tabor-boy"},
+  "367414870":{name:"Liberty Clipper",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,url:"https://en.wikipedia.org/wiki/Liberty_Clipper"},
+  "369603000":{name:"Lynx",flag:"🇺🇸",country:"USA",type:"Topsail Schooner",boston:true,url:"https://en.wikipedia.org/wiki/Lynx_(tall_ship)"},
+  "303498000":{name:"Schooner Bowdoin",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,url:"https://mainemaritime.edu/waterfront/schooner-bowdoin/"},
+  "367004000":{name:"Kalmar Nyckel",flag:"🇺🇸",country:"USA",type:"Pinnace",boston:true,url:"https://www.kalmarnyckel.org/"},
+  "367066790":{name:"Elissa",flag:"🇺🇸",country:"USA",type:"Barque",boston:false,url:"https://www.galvestonhistory.org/sites/1877-tall-ship-elissa-at-the-galveston-historic-seaport"},
+  "303615000":{name:"Pride of Baltimore",flag:"🇺🇸",country:"USA",type:"Topsail Schooner",boston:true,url:"https://pride2.org/"},
+  "367350650":{name:"Lady Maryland",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,url:"https://tallshipsamerica.org/vessels/lady-maryland/"},
+  "367784530":{name:"Angelique",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true,url:null},
 };
 const NAVS={0:"Under way",1:"At anchor",2:"Not under command",3:"Restricted",5:"Moored",7:"Fishing",8:"Sailing",15:"Default"};
 let map,socket;
@@ -178,7 +178,7 @@ function updateShip(mmsi,lat,lng,spd,hdg,nav){
     ships[mmsi].mk.setLatLng([lat,lng]);
     ships[mmsi].mk.setIcon(mkIcon(name,hdg,true,flag));
   }
-  ships[mmsi].d={mmsi,name,flag,country,type,lat,lng,spd,hdg,nav,wl:true,boston:k.boston,wiki:k.wiki,lastSeen:Date.now()};
+  ships[mmsi].d={mmsi,name,flag,country,type,lat,lng,spd,hdg,nav,wl:true,boston:k.boston,url:k.url,lastSeen:Date.now()};
   const w=Object.keys(ships).length;
   document.getElementById('shipcount').textContent=w+' tall ship'+(w!==1?'s':'');
 }
@@ -196,7 +196,7 @@ function openPanel(mmsi){
   let html=s.boston
     ?'<div class="bostonbadge">⚓ Boston-bound · Transiting via Cape Cod Canal</div>'
     :'<div class="bostonbadge" style="background:rgba(74,158,202,.1);border-color:rgba(74,158,202,.4);color:var(--wake)">Not Boston-bound</div>';
-  if(s.wiki)html+='<a class="wikibtn" href="https://en.wikipedia.org/wiki/'+s.wiki+'" target="_blank" rel="noopener">View info about this ship</a>';
+  if(s.url)html+='<a class="infobtn" href="'+s.url+'" target="_blank" rel="noopener">View info about this ship</a>';
   sl.innerHTML=html;
   document.getElementById('panel').classList.add('open');
   map.flyTo([s.lat,s.lng],13,{duration:1});
