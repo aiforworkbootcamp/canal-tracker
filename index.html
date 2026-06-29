@@ -175,22 +175,19 @@ function mkIcon(name,hdg,wl,flag){
 }
 function updateShip(mmsi,lat,lng,spd,hdg,nav,rawName){
   const k=WL[mmsi];
-  const name=k?k.name:(rawName&&rawName.trim()||'MMSI '+mmsi);
-  const flag=k?k.flag:'🚢';
-  const country=k?k.country:'Unknown';
-  const type=k?k.type:'Vessel';
-  const wl=!!k;
+  if(!k)return;
+  const name=k.name,flag=k.flag,country=k.country,type=k.type;
   if(!lat||!lng||lat===0||Math.abs(lat)>90||Math.abs(lng)>180)return;
   const e=calcEta(lat,lng,spd);
   if(!ships[mmsi]){
-    const mk=L.marker([lat,lng],{icon:mkIcon(name,hdg,wl,flag),zIndexOffset:wl?300:100}).addTo(map);
+    const mk=L.marker([lat,lng],{icon:mkIcon(name,hdg,true,flag),zIndexOffset:300}).addTo(map);
     mk.bindPopup('<div class="pup-name">'+flag+' '+name+'</div><div class="pup-detail">'+country+' · '+type+'</div><div class="pup-tap">Tap for ETA details →</div>');
     mk.on('click',function(ev){L.DomEvent.stopPropagation(ev);openPanel(mmsi);});
     ships[mmsi]={mk};
-  }else{ships[mmsi].mk.setLatLng([lat,lng]);ships[mmsi].mk.setIcon(mkIcon(name,hdg,wl,flag));}
-  ships[mmsi].d={mmsi,name,flag,country,type,lat,lng,spd,hdg,nav,eta:e,wl};
-  const n=Object.keys(ships).length,w=Object.values(ships).filter(s=>s.d&&s.d.wl).length;
-  document.getElementById('shipcount').textContent=w?(n+' ships · '+w+' tall ships'):(n+' ships');
+  }else{ships[mmsi].mk.setLatLng([lat,lng]);ships[mmsi].mk.setIcon(mkIcon(name,hdg,true,flag));}
+  ships[mmsi].d={mmsi,name,flag,country,type,lat,lng,spd,hdg,nav,eta:e,wl:true};
+  const w=Object.keys(ships).length;
+  document.getElementById('shipcount').textContent=w+' tall ship'+(w!==1?'s':'');
   refreshBanner();
 }
 function refreshBanner(){
@@ -233,31 +230,27 @@ function connect(key){
     ws.send(JSON.stringify({
       APIKey:key,
       BoundingBoxes:[[BBOX[0],BBOX[1]]],
-      FiltersShipMMSI:Object.keys(WL),
-      FilterMessageTypes:['PositionReport','ShipStaticData']
+      FilterMessageTypes:['PositionReport','ShipStaticData'],
     }));
     pill.className='pill live';pill.textContent='● LIVE';
   };
-  ws.onmessage=function(ev){
+  ws.onmessage=async function(ev){
     try{
-      const msg=JSON.parse(ev.data),meta=msg.MetaData||{};
+      const text=ev.data instanceof Blob?await ev.data.text():ev.data;
+      const msg=JSON.parse(text),meta=msg.MetaData||{};
       const mmsi=String(meta.MMSI||'');
-      if(!mmsi)return;
+      if(!mmsi||!WL[mmsi])return;
       if(msg.MessageType==='PositionReport'){
         const p=msg.Message&&msg.Message.PositionReport;if(!p)return;
         const lat=p.Latitude,lng=p.Longitude,spd=p.Sog;
         const hdg=p.TrueHeading<360?p.TrueHeading:p.Cog;
         const nav=p.NavigationalStatus;
-        const name=(meta.ShipName||'').trim();
-        if(!WL[mmsi]&&(!spd||spd<1.0))return;
-        updateShip(mmsi,lat,lng,spd,hdg,nav,name);
+        updateShip(mmsi,lat,lng,spd,hdg,nav,'');
       }
       if(msg.MessageType==='ShipStaticData'){
         const p=msg.Message&&msg.Message.ShipStaticData;if(!p)return;
-        if(!WL[mmsi])return;
         const lat=meta.Latitude,lng=meta.Longitude;
-        const name=(p.Name||meta.ShipName||'').trim();
-        updateShip(mmsi,lat,lng,0,null,5,name);
+        updateShip(mmsi,lat,lng,0,null,5,'');
       }
     }catch(e){}
   };
