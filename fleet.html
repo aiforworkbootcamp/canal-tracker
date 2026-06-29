@@ -46,6 +46,7 @@
   .bostonbadge{display:inline-block;margin-top:10px;font-family:monospace;font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(200,150,62,.15);border:1px solid var(--gold);color:var(--goldlt)}
   .infobtn{display:inline-block;margin-top:8px;margin-left:6px;font-family:monospace;font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(74,158,202,.12);border:1px solid rgba(74,158,202,.4);color:var(--wake);text-decoration:none}
   .infobtn:hover{background:rgba(74,158,202,.25)}
+  .stale{opacity:.55}
   #loading{position:fixed;inset:0;background:var(--navy);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
   .load-title{font-size:22px;color:var(--goldlt);font-weight:bold}
   .load-sub{font-size:13px;color:var(--wake);font-family:monospace}
@@ -53,8 +54,10 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   .ship-circle{width:44px;height:44px;border-radius:50%;border:3px solid #e8f4f8;background:#1a4a6e;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.6);cursor:pointer;position:relative}
   .ship-circle.wl{border-color:#f0c96a;background:#0d2137}
+  .ship-circle.stale{border-color:#5a7a8a!important;opacity:.6}
   .ship-label{position:absolute;top:48px;left:50%;transform:translateX(-50%);background:rgba(13,33,55,.92);color:#e8f4f8;font-family:monospace;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:3px;white-space:nowrap;border:1px solid rgba(74,158,202,.4);box-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:none}
   .ship-circle.wl .ship-label{color:#f0c96a;border-color:rgba(200,150,62,.5)}
+  .ship-circle.stale .ship-label{color:#8aabb8!important}
   .leaflet-popup-content-wrapper{background:var(--navy);border:1px solid var(--wake);border-radius:var(--rad);color:var(--foam);box-shadow:0 4px 20px rgba(0,0,0,.5)}
   .leaflet-popup-tip{background:var(--navy)}
   .leaflet-popup-content{margin:10px 14px;font-family:Georgia,serif}
@@ -115,6 +118,8 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+const STORE='tallships_positions';
+const STALE_MS=60*60*1000; // grey out after 1 hour
 const BBOX=[[38.50,-77.00],[42.50,-69.50]];
 const WL={
   "247999000":{name:"Amerigo Vespucci",flag:"🇮🇹",country:"Italy",type:"Full-Rigged Ship",boston:true,url:"https://tourvespucci.it/en/the-ship/"},
@@ -151,6 +156,27 @@ const WL={
 const NAVS={0:"Under way",1:"At anchor",2:"Not under command",3:"Restricted",5:"Moored",7:"Fishing",8:"Sailing",15:"Default"};
 let map,socket;
 const ships={};
+
+function saveStore(){
+  const out={};
+  Object.entries(ships).forEach(([mmsi,s])=>{if(s.d)out[mmsi]=s.d;});
+  try{localStorage.setItem(STORE,JSON.stringify(out));}catch(e){}
+}
+function loadStore(){
+  try{
+    const raw=localStorage.getItem(STORE);
+    if(!raw)return{};
+    return JSON.parse(raw)||{};
+  }catch(e){return{};}
+}
+function fmtAge(ms){
+  const m=Math.round(ms/60000);
+  if(m<1)return'just now';
+  if(m<60)return m+'m ago';
+  const h=Math.floor(m/60),r=m%60;
+  return r?h+'h '+r+'m ago':h+'h ago';
+}
+
 function initMap(){
   map=L.map('map',{center:[40.80,-73.50],zoom:7});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(map);
@@ -158,36 +184,56 @@ function initMap(){
 }
 function flyTo(lat,lng,zoom){map.flyTo([lat,lng],zoom,{duration:1});}
 function cps(d){return['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(d/22.5)%16];}
-function mkIcon(name,hdg,wl,flag){
+function isStale(d){return(Date.now()-d.lastSeen)>STALE_MS;}
+function mkIcon(name,hdg,flag,stale){
   const label=name.length>14?name.slice(0,13)+'…':name;
   const rot=(hdg!=null&&hdg<360)?hdg:0;
-  const arrowColor=wl?'#f0c96a':'#e8f4f8';
-  return L.divIcon({html:'<div class="ship-circle'+(wl?' wl':'')+'"><div style="position:absolute;top:-11px;left:50%;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid '+arrowColor+';transform:translateX(-50%) rotate('+rot+'deg);transform-origin:5px 21px"></div><span>'+flag+'</span><div class="ship-label">'+label+'</div></div>',className:'',iconAnchor:[22,22],iconSize:[44,68]});
+  return L.divIcon({html:'<div class="ship-circle wl'+(stale?' stale':'')+'"><div style="position:absolute;top:-11px;left:50%;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid '+(stale?'#5a7a8a':'#f0c96a')+';transform:translateX(-50%) rotate('+rot+'deg);transform-origin:5px 21px"></div><span>'+flag+'</span><div class="ship-label">'+label+'</div></div>',className:'',iconAnchor:[22,22],iconSize:[44,68]});
 }
 function updateShip(mmsi,lat,lng,spd,hdg,nav){
   const k=WL[mmsi];
   if(!k)return;
-  const name=k.name,flag=k.flag,country=k.country,type=k.type;
   if(!lat||!lng||lat===0||Math.abs(lat)>90||Math.abs(lng)>180)return;
+  const d={mmsi,name:k.name,flag:k.flag,country:k.country,type:k.type,lat,lng,spd,hdg,nav,boston:k.boston,url:k.url,lastSeen:Date.now()};
   if(!ships[mmsi]){
-    const mk=L.marker([lat,lng],{icon:mkIcon(name,hdg,true,flag),zIndexOffset:300}).addTo(map);
-    mk.bindPopup('<div class="pup-name">'+flag+' '+name+'</div><div class="pup-detail">'+country+' · '+type+'</div><div class="pup-tap">Tap for details →</div>');
+    const mk=L.marker([lat,lng],{icon:mkIcon(k.name,hdg,k.flag,false),zIndexOffset:300}).addTo(map);
+    mk.bindPopup('<div class="pup-name">'+k.flag+' '+k.name+'</div><div class="pup-detail">'+k.country+' · '+k.type+'</div><div class="pup-tap">Tap for details →</div>');
     mk.on('click',function(ev){L.DomEvent.stopPropagation(ev);openPanel(mmsi);});
     ships[mmsi]={mk};
   }else{
     ships[mmsi].mk.setLatLng([lat,lng]);
-    ships[mmsi].mk.setIcon(mkIcon(name,hdg,true,flag));
+    ships[mmsi].mk.setIcon(mkIcon(k.name,hdg,k.flag,false));
   }
-  ships[mmsi].d={mmsi,name,flag,country,type,lat,lng,spd,hdg,nav,wl:true,boston:k.boston,url:k.url,lastSeen:Date.now()};
+  ships[mmsi].d=d;
+  saveStore();
+  updateCount();
+}
+function plotStored(stored){
+  Object.entries(stored).forEach(([mmsi,d])=>{
+    const k=WL[mmsi];if(!k)return;
+    if(!d.lat||!d.lng)return;
+    const stale=isStale(d);
+    if(!ships[mmsi]){
+      const mk=L.marker([d.lat,d.lng],{icon:mkIcon(k.name,d.hdg,k.flag,stale),zIndexOffset:300}).addTo(map);
+      mk.bindPopup('<div class="pup-name">'+k.flag+' '+k.name+'</div><div class="pup-detail">'+k.country+' · '+k.type+'</div><div class="pup-tap">Tap for details →</div>');
+      mk.on('click',function(ev){L.DomEvent.stopPropagation(ev);openPanel(mmsi);});
+      ships[mmsi]={mk};
+    }
+    ships[mmsi].d=Object.assign({},d,{url:k.url,boston:k.boston});
+  });
+  updateCount();
+}
+function updateCount(){
   const w=Object.keys(ships).length;
   document.getElementById('shipcount').textContent=w+' tall ship'+(w!==1?'s':'');
 }
 function openPanel(mmsi){
   const s=ships[mmsi]&&ships[mmsi].d;if(!s)return;
+  const age=Date.now()-s.lastSeen;
+  const stale=age>STALE_MS;
   document.getElementById('pname').textContent=s.flag+' '+s.name;
   document.getElementById('pflag').textContent=s.country+' · '+s.type+' · MMSI '+s.mmsi;
-  const ageMin=Math.round((Date.now()-s.lastSeen)/60000);
-  document.getElementById('pstatus').textContent=(NAVS[s.nav]||'Under way')+(ageMin>2?' · last update '+ageMin+'m ago':'');
+  document.getElementById('pstatus').textContent=(NAVS[s.nav]||'Under way')+' · last seen '+fmtAge(age)+(stale?' ⚠️ position may be stale':'');
   document.getElementById('pspeed').innerHTML=(s.spd!=null?s.spd.toFixed(1):'—')+'<span class="sunit">kn</span>';
   document.getElementById('phdg').innerHTML=(s.hdg!=null?s.hdg:'—')+'<span class="sunit">° '+(s.hdg!=null?cps(s.hdg):'')+' </span>';
   document.getElementById('pmmsi').textContent=s.mmsi;
@@ -203,14 +249,16 @@ function openPanel(mmsi){
 }
 function closePanel(){document.getElementById('panel').classList.remove('open');}
 async function boot(){
-  document.getElementById('loadmsg').textContent='Fetching live feed…';
+  document.getElementById('loadmsg').textContent='Loading…';
   try{
     const r=await fetch('/api/key');
-    if(!r.ok)throw new Error('Key endpoint '+r.status);
+    if(!r.ok)throw new Error('Key '+r.status);
     const data=await r.json();
     if(!data.key)throw new Error('No key');
     document.getElementById('loading').style.display='none';
-    initMap();connect(data.key);
+    initMap();
+    plotStored(loadStore());
+    connect(data.key);
   }catch(e){document.getElementById('loadmsg').textContent='Connection error — please try again.';console.error(e);}
 }
 function connect(key){
