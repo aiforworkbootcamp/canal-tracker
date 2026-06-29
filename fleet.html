@@ -113,7 +113,6 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// Wide bbox: Baltimore to Cape Cod — matches where the fleet actually is right now
 const BBOX=[[38.50,-77.00],[42.50,-69.50]];
 
 const WL={
@@ -131,6 +130,10 @@ const WL={
   "735059037":{name:"Guayas",flag:"🇪🇨",country:"Ecuador",type:"Barque",boston:false},
   "770576100":{name:"Capitan Miranda",flag:"🇺🇾",country:"Uruguay",type:"Schooner",boston:false},
   "246011000":{name:"Oosterschelde",flag:"🇳🇱",country:"Netherlands",type:"Topsail Schooner",boston:true},
+  "265404000":{name:"HMS Gladan",flag:"🇸🇪",country:"Sweden",type:"Schooner",boston:true},
+  "228796000":{name:"FS Belle Poule",flag:"🇫🇷",country:"France",type:"Topsail Schooner",boston:true},
+  "254711000":{name:"Tuiga",flag:"🇲🇨",country:"Monaco",type:"Gaff Schooner",boston:false},
+  "211237490":{name:"Walross 4",flag:"🇩🇪",country:"Germany",type:"Brigantine",boston:false},
   "338327000":{name:"Denis Sullivan",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true},
   "368275660":{name:"Ernestina-Morrissey",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true},
   "368189000":{name:"Harvey Gamage",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true},
@@ -140,6 +143,9 @@ const WL={
   "303498000":{name:"Schooner Bowdoin",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true},
   "367004000":{name:"Kalmar Nyckel",flag:"🇺🇸",country:"USA",type:"Pinnace",boston:true},
   "367066790":{name:"Elissa",flag:"🇺🇸",country:"USA",type:"Barque",boston:false},
+  "303615000":{name:"Pride of Baltimore",flag:"🇺🇸",country:"USA",type:"Topsail Schooner",boston:true},
+  "367350650":{name:"Lady Maryland",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true},
+  "367784530":{name:"Angelique",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true},
 };
 
 const NAVS={0:"Under way",1:"At anchor",2:"Not under command",3:"Restricted",5:"Moored",7:"Fishing",8:"Sailing",15:"Default"};
@@ -147,7 +153,6 @@ let map,socket;
 const ships={};
 
 function initMap(){
-  // Center view to show full fleet spread from Baltimore to Cape Cod
   map=L.map('map',{center:[40.80,-73.50],zoom:7});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(map);
