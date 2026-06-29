@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tall Ships Fleet · NY Harbor</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--navy:#0d2137;--wake:#4a9eca;--foam:#e8f4f8;--gold:#c8963e;--goldlt:#f0c96a;--muted:#5a7a8a;--rad:8px;}
+  body{font-family:Georgia,serif;background:var(--navy);color:var(--foam);height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+  header{background:var(--navy);border-bottom:1px solid rgba(74,158,202,.3);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;z-index:1000}
+  .htitle{font-size:15px;font-weight:bold;color:var(--goldlt);letter-spacing:.03em;line-height:1.2}
+  .hsub{font-size:11px;color:var(--wake);font-family:monospace;letter-spacing:.05em}
+  .hright{display:flex;align-items:center;gap:8px}
+  .pill{font-family:monospace;font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid;white-space:nowrap}
+  .pill.connecting{color:var(--goldlt);border-color:var(--gold);background:rgba(200,150,62,.15)}
+  .pill.live{color:#5dde8a;border-color:#2ecc71;background:rgba(46,204,113,.12)}
+  .pill.error{color:#e87070;border-color:#c0392b;background:rgba(192,57,43,.15)}
+  .countbadge{font-family:monospace;font-size:11px;color:var(--goldlt);background:rgba(200,150,62,.15);border:1px solid rgba(200,150,62,.3);border-radius:20px;padding:3px 9px;white-space:nowrap}
+  #viewnav{background:rgba(13,33,55,.97);border-bottom:1px solid rgba(74,158,202,.25);padding:8px 16px;display:flex;gap:8px;flex-shrink:0}
+  .navbtn{font-family:monospace;font-size:11px;padding:5px 14px;border-radius:20px;border:1px solid rgba(74,158,202,.4);background:transparent;color:var(--wake);cursor:pointer;text-decoration:none;display:inline-block;transition:all .15s}
+  .navbtn:hover{background:rgba(74,158,202,.15)}
+  .navbtn.active{background:var(--gold);border-color:var(--gold);color:var(--navy);font-weight:bold}
+  #pierbar{background:rgba(13,33,55,.95);border-bottom:1px solid rgba(200,150,62,.25);padding:7px 16px;display:flex;align-items:center;gap:12px;overflow-x:auto;flex-shrink:0;min-height:38px}
+  .pierchip{font-family:monospace;font-size:10px;padding:2px 8px;border-radius:10px;white-space:nowrap;border:1px solid;cursor:pointer}
+  .pierchip.p86{color:#f0c96a;border-color:rgba(200,150,62,.5);background:rgba(200,150,62,.1)}
+  .pierchip.pbb{color:#5dde8a;border-color:rgba(46,204,113,.5);background:rgba(46,204,113,.08)}
+  .pierchip.pss{color:#aad4f0;border-color:rgba(74,158,202,.5);background:rgba(74,158,202,.1)}
+  .pierchip.psi{color:#cc88ff;border-color:rgba(160,80,255,.5);background:rgba(160,80,255,.08)}
+  .pierchip.pnj{color:#ff9966;border-color:rgba(255,120,60,.5);background:rgba(255,120,60,.08)}
+  .pierlabel{font-family:monospace;font-size:10px;color:var(--muted);white-space:nowrap}
+  #map{flex:1;z-index:1}
+  #panel{position:fixed;bottom:0;left:0;right:0;background:var(--navy);border-top:2px solid var(--gold);padding:16px 20px 28px;z-index:2000;transform:translateY(100%);transition:transform .3s ease;max-height:72vh;overflow-y:auto}
+  #panel.open{transform:translateY(0)}
+  .pclose{position:absolute;top:12px;right:16px;background:none;border:1px solid rgba(74,158,202,.4);color:var(--wake);font-size:18px;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .pname{font-size:22px;color:var(--goldlt);margin-bottom:4px;padding-right:36px}
+  .pflag{font-family:monospace;font-size:12px;color:var(--wake);margin-bottom:12px}
+  .infobox{background:rgba(255,255,255,.05);border:1px solid rgba(74,158,202,.2);border-radius:var(--rad);padding:12px 14px;margin-bottom:12px}
+  .infolabel{font-family:monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+  .infoval{font-size:14px;color:var(--foam)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .sbox{background:rgba(255,255,255,.05);border:1px solid rgba(74,158,202,.2);border-radius:var(--rad);padding:10px 12px}
+  .slabel{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;font-family:monospace}
+  .sval{font-size:18px;color:var(--foam);font-weight:bold;font-family:monospace}
+  .sunit{font-size:11px;color:var(--wake);margin-left:2px}
+  .bostonbadge{display:inline-block;margin-top:10px;font-family:monospace;font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(200,150,62,.15);border:1px solid var(--gold);color:var(--goldlt)}
+  #loading{position:fixed;inset:0;background:var(--navy);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+  .load-title{font-size:22px;color:var(--goldlt);font-weight:bold}
+  .load-sub{font-size:13px;color:var(--wake);font-family:monospace}
+  .load-spinner{width:36px;height:36px;border:3px solid rgba(74,158,202,.2);border-top-color:var(--wake);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .ship-circle{width:44px;height:44px;border-radius:50%;border:3px solid #e8f4f8;background:#1a4a6e;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.6);cursor:pointer;position:relative}
+  .ship-circle.wl{border-color:#f0c96a;background:#0d2137}
+  .ship-label{position:absolute;top:48px;left:50%;transform:translateX(-50%);background:rgba(13,33,55,.92);color:#e8f4f8;font-family:monospace;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:3px;white-space:nowrap;border:1px solid rgba(74,158,202,.4);box-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:none}
+  .ship-circle.wl .ship-label{color:#f0c96a;border-color:rgba(200,150,62,.5)}
+  .leaflet-popup-content-wrapper{background:var(--navy);border:1px solid var(--wake);border-radius:var(--rad);color:var(--foam);box-shadow:0 4px 20px rgba(0,0,0,.5)}
+  .leaflet-popup-tip{background:var(--navy)}
+  .leaflet-popup-content{margin:10px 14px;font-family:Georgia,serif}
+  .pup-name{font-size:14px;font-weight:bold;color:var(--goldlt);margin-bottom:3px}
+  .pup-detail{font-size:11px;color:var(--wake);font-family:monospace;margin-top:2px}
+  .pup-tap{font-size:10px;color:var(--muted);margin-top:7px;font-style:italic}
+</style>
+</head>
+<body>
+<div id="loading">
+  <div style="font-size:36px">⛵</div>
+  <div class="load-title">Tall Ships Fleet</div>
+  <div class="load-sub">NY Harbor · Live AIS</div>
+  <div class="load-spinner"></div>
+  <div class="load-sub" id="loadmsg">Connecting…</div>
+</div>
+<header>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="font-size:24px">⛵</div>
+    <div>
+      <div class="htitle">Tall Ships 2026 · Fleet Tracker</div>
+      <div class="hsub">NY Harbor · Live positions · Unofficial</div>
+    </div>
+  </div>
+  <div class="hright">
+    <span class="countbadge" id="shipcount">0 ships</span>
+    <div id="statuspill" class="pill connecting">● CONNECTING</div>
+  </div>
+</header>
+<div id="viewnav">
+  <a class="navbtn active" href="/fleet.html">🗽 NY Harbor</a>
+  <a class="navbtn" href="/">🌉 Canal Tracker</a>
+</div>
+<div id="pierbar">
+  <span class="pierlabel">JUMP TO:</span>
+  <span class="pierchip p86" onclick="flyTo(40.7720,-74.0021,15)">Pier 86 · Intrepid</span>
+  <span class="pierchip pbb" onclick="flyTo(40.6990,-74.0140,15)">Brooklyn Bridge Park</span>
+  <span class="pierchip pss" onclick="flyTo(40.7063,-74.0035,15)">South Street Seaport</span>
+  <span class="pierchip psi" onclick="flyTo(40.6290,-74.0740,14)">Staten Island</span>
+  <span class="pierchip pnj" onclick="flyTo(40.7280,-74.0750,14)">Hoboken / NJ</span>
+</div>
+<div id="map"></div>
+<div id="panel">
+  <button class="pclose" onclick="closePanel()">✕</button>
+  <div class="pname" id="pname">—</div>
+  <div class="pflag" id="pflag">—</div>
+  <div class="infobox">
+    <div class="infolabel">Nav Status</div>
+    <div class="infoval" id="pstatus">—</div>
+  </div>
+  <div class="grid">
+    <div class="sbox"><div class="slabel">Speed</div><div class="sval" id="pspeed">—<span class="sunit">kn</span></div></div>
+    <div class="sbox"><div class="slabel">Heading</div><div class="sval" id="phdg">—<span class="sunit">°</span></div></div>
+    <div class="sbox"><div class="slabel">MMSI</div><div class="sval" style="font-size:13px" id="pmmsi">—</div></div>
+    <div class="sbox"><div class="slabel">Type</div><div class="sval" style="font-size:13px" id="ptype">—</div></div>
+  </div>
+  <div id="bostonlink"></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const BBOX=[[40.40,-74.35],[41.00,-73.70]];
+const WL={
+  "247999000":{name:"Amerigo Vespucci",flag:"🇮🇹",country:"Italy",type:"Full-Rigged Ship",boston:true},
+  "261148000":{name:"Dar Mlodziezy",flag:"🇵🇱",country:"Poland",type:"Full-Rigged Ship",boston:true},
+  "701000001":{name:"ARA Libertad",flag:"🇦🇷",country:"Argentina",type:"Full-Rigged Ship",boston:true},
+  "303990000":{name:"USCGC Eagle",flag:"🇺🇸",country:"USA",type:"Barque",boston:true},
+  "725019006":{name:"Esmeralda",flag:"🇨🇱",country:"Chile",type:"Barquentine",boston:true},
+  "710428000":{name:"Cisne Branco",flag:"🇧🇷",country:"Brazil",type:"Full-Rigged Ship",boston:true},
+  "760105000":{name:"BAP Union",flag:"🇵🇪",country:"Peru",type:"4-Mast Barque",boston:true},
+  "263141000":{name:"NRP Sagres",flag:"🇵🇹",country:"Portugal",type:"Barque",boston:true},
+  "211210280":{name:"Gorch Fock",flag:"🇩🇪",country:"Germany",type:"Barque",boston:true},
+  "264800057":{name:"Mircea",flag:"🇷🇴",country:"Romania",type:"Barque",boston:true},
+  "224977000":{name:"JS de Elcano",flag:"🇪🇸",country:"Spain",type:"Topsail Schooner",boston:true},
+  "735059037":{name:"Guayas",flag:"🇪🇨",country:"Ecuador",type:"Barque",boston:false},
+  "770576100":{name:"Capitan Miranda",flag:"🇺🇾",country:"Uruguay",type:"Schooner",boston:false},
+  "246011000":{name:"Oosterschelde",flag:"🇳🇱",country:"Netherlands",type:"Topsail Schooner",boston:true},
+  "338327000":{name:"Denis Sullivan",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true},
+  "368275660":{name:"Ernestina-Morrissey",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true},
+  "368189000":{name:"Harvey Gamage",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true},
+  "366325930":{name:"Tabor Boy",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true},
+  "367414870":{name:"Liberty Clipper",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true},
+  "369603000":{name:"Lynx",flag:"🇺🇸",country:"USA",type:"Topsail Schooner",boston:true},
+  "303498000":{name:"Schooner Bowdoin",flag:"🇺🇸",country:"USA",type:"Schooner",boston:true},
+  "367004000":{name:"Kalmar Nyckel",flag:"🇺🇸",country:"USA",type:"Pinnace",boston:true},
+  "367066790":{name:"Elissa",flag:"🇺🇸",country:"USA",type:"Barque",boston:false},
+};
+const NAVS={0:"Under way",1:"At anchor",2:"Not under command",3:"Restricted",5:"Moored",7:"Fishing",8:"Sailing",15:"Default"};
+let map,socket;
+const ships={};
+function initMap(){
+  map=L.map('map',{center:[40.690,-74.020],zoom:12});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(map);
+  addPier(40.7720,-74.0021,'Pier 86\nIntrepid','#f0c96a');
+  addPier(40.7063,-74.0035,'South Street\nSeaport','#aad4f0');
+  addPier(40.6990,-74.0140,'Brooklyn\nBridge Park','#5dde8a');
+  addPier(40.6290,-74.0740,'Staten Island\nWaterfront','#cc88ff');
+  map.on('click',closePanel);
+}
+function addPier(lat,lng,label,color){
+  L.marker([lat,lng],{zIndexOffset:400,icon:L.divIcon({
+    html:'<div style="background:rgba(13,33,55,.9);color:'+color+';font-size:9px;font-family:monospace;font-weight:bold;padding:3px 7px;border-radius:4px;border:1px solid '+color+';white-space:pre;line-height:1.4;box-shadow:0 2px 6px rgba(0,0,0,.5)">'+label+'</div>',
+    className:'',iconAnchor:[0,0]})}).addTo(map);
+}
+function flyTo(lat,lng,zoom){map.flyTo([lat,lng],zoom,{duration:1});}
+function cps(d){return['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(d/22.5)%16];}
+function mkIcon(name,hdg,wl,flag){
+  const label=name.length>14?name.slice(0,13)+'…':name;
+  const rot=(hdg!=null&&hdg<360)?hdg:0;
+  const arrowColor=wl?'#f0c96a':'#e8f4f8';
+  return L.divIcon({
+    html:'<div class="ship-circle'+(wl?' wl':'')+'">'+'<div style="position:absolute;top:-11px;left:50%;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid '+arrowColor+';transform:translateX(-50%) rotate('+rot+'deg);transform-origin:5px 21px"></div>'+'<span>'+flag+'</span><div class="ship-label">'+label+'</div></div>',
+    className:'',iconAnchor:[22,22],iconSize:[44,68],
+  });
+}
+function updateShip(mmsi,lat,lng,spd,hdg,nav,rawName){
+  const k=WL[mmsi];
+  const name=k?k.name:(rawName&&rawName.trim()||'MMSI '+mmsi);
+  const flag=k?k.flag:'🚢';
+  const country=k?k.country:'Unknown';
+  const type=k?k.type:'Vessel';
+  const wl=!!k;
+  if(!ships[mmsi]){
+    const mk=L.marker([lat,lng],{icon:mkIcon(name,hdg,wl,flag),zIndexOffset:wl?300:100}).addTo(map);
+    mk.bindPopup('<div class="pup-name">'+flag+' '+name+'</div><div class="pup-detail">'+country+' · '+type+'</div><div class="pup-tap">Tap for details →</div>');
+    mk.on('click',function(ev){L.DomEvent.stopPropagation(ev);openPanel(mmsi);});
+    ships[mmsi]={mk};
+  }else{
+    ships[mmsi].mk.setLatLng([lat,lng]);
+    ships[mmsi].mk.setIcon(mkIcon(name,hdg,wl,flag));
+  }
+  ships[mmsi].d={mmsi,name,flag,country,type,lat,lng,spd,hdg,nav,wl,boston:k?k.boston:false};
+  const n=Object.keys(ships).length,w=Object.values(ships).filter(s=>s.d&&s.d.wl).length;
+  document.getElementById('shipcount').textContent=w?(n+' ships · '+w+' tall ships'):(n+' ships');
+}
+function openPanel(mmsi){
+  const s=ships[mmsi]&&ships[mmsi].d;if(!s)return;
+  document.getElementById('pname').textContent=s.flag+' '+s.name;
+  document.getElementById('pflag').textContent=s.country+' · '+s.type+' · MMSI '+s.mmsi;
+  document.getElementById('pstatus').textContent=NAVS[s.nav]||'Under way';
+  document.getElementById('pspeed').innerHTML=(s.spd||0).toFixed(1)+'<span class="sunit">kn</span>';
+  document.getElementById('phdg').innerHTML=(s.hdg!=null?s.hdg:'—')+'<span class="sunit">° '+(s.hdg!=null?cps(s.hdg):'')+' </span>';
+  document.getElementById('pmmsi').textContent=s.mmsi;
+  document.getElementById('ptype').textContent=s.type;
+  const bl=document.getElementById('bostonlink');
+  bl.innerHTML=s.boston?'<div class="bostonbadge">⚓ Boston-bound · Departs NYC July 8</div>':'<div class="bostonbadge" style="background:rgba(74,158,202,.1);border-color:rgba(74,158,202,.4);color:var(--wake)">Staying in NY · Not Boston-bound</div>';
+  document.getElementById('panel').classList.add('open');
+  map.flyTo([s.lat,s.lng],14,{duration:1});
+}
+function closePanel(){document.getElementById('panel').classList.remove('open');}
+async function boot(){
+  document.getElementById('loadmsg').textContent='Fetching live feed…';
+  try{
+    const r=await fetch('/api/key');
+    if(!r.ok)throw new Error('Key endpoint '+r.status);
+    const data=await r.json();
+    if(!data.key)throw new Error('No key');
+    document.getElementById('loading').style.display='none';
+    initMap();
+    connect(data.key);
+  }catch(e){
+    document.getElementById('loadmsg').textContent='Connection error — please try again.';
+    console.error(e);
+  }
+}
+function connect(key){
+  const pill=document.getElementById('statuspill');
+  pill.className='pill connecting';pill.textContent='● CONNECTING';
+  const ws=new WebSocket('wss://stream.aisstream.io/v0/stream');
+  ws.onopen=function(){
+    ws.send(JSON.stringify({Apikey:key,BoundingBoxes:[[BBOX[0],BBOX[1]]],FiltersShipMMSI:Object.keys(WL),FilterMessageTypes:['PositionReport','ShipStaticData']}));
+    pill.className='pill live';pill.textContent='● LIVE';
+  };
+  ws.onmessage=function(ev){
+    try{
+      const msg=JSON.parse(ev.data),meta=msg.MetaData||{};
+      if(msg.MessageType==='PositionReport'){
+        const p=msg.Message&&msg.Message.PositionReport;if(!p)return;
+        const mmsi=String(p.UserId||meta.MMSI);
+        const lat=p.Latitude,lng=p.Longitude,spd=p.Sog;
+        const hdg=p.TrueHeading<360?p.TrueHeading:p.Cog;
+        const nav=p.NavigationalStatus;
+        const name=(meta.ShipName||'').trim();
+        if(!WL[mmsi]&&spd<0.5)return;
+        if(!lat||!lng||lat===0||Math.abs(lat)>90)return;
+        updateShip(mmsi,lat,lng,spd,hdg,nav,name);
+      }
+    }catch(e){}
+  };
+  ws.onerror=function(){pill.className='pill error';pill.textContent='● ERROR';};
+  ws.onclose=function(){pill.className='pill error';pill.textContent='● RECONNECTING';setTimeout(function(){connect(key);},10000);};
+  socket=ws;
+}
+boot();
+</script>
+</body>
+</html>
