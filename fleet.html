@@ -45,6 +45,7 @@
   .sval{font-size:18px;color:var(--foam);font-weight:bold;font-family:monospace}
   .sunit{font-size:11px;color:var(--wake);margin-left:2px}
   .bostonbadge{display:inline-block;margin-top:10px;font-family:monospace;font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(200,150,62,.15);border:1px solid var(--gold);color:var(--goldlt)}
+  .darkbadge{background:rgba(192,57,43,.1);border-color:rgba(192,57,43,.4);color:#e87070}
   #loading{position:fixed;inset:0;background:var(--navy);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
   .load-title{font-size:22px;color:var(--goldlt);font-weight:bold}
   .load-sub{font-size:13px;color:var(--wake);font-family:monospace}
@@ -52,8 +53,10 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   .ship-circle{width:44px;height:44px;border-radius:50%;border:3px solid #e8f4f8;background:#1a4a6e;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.6);cursor:pointer;position:relative}
   .ship-circle.wl{border-color:#f0c96a;background:#0d2137}
+  .ship-circle.dark{border-color:rgba(192,57,43,.6);opacity:.6}
   .ship-label{position:absolute;top:48px;left:50%;transform:translateX(-50%);background:rgba(13,33,55,.92);color:#e8f4f8;font-family:monospace;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:3px;white-space:nowrap;border:1px solid rgba(74,158,202,.4);box-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:none}
   .ship-circle.wl .ship-label{color:#f0c96a;border-color:rgba(200,150,62,.5)}
+  .ship-circle.dark .ship-label{color:rgba(232,116,116,.8)}
   .leaflet-popup-content-wrapper{background:var(--navy);border:1px solid var(--wake);border-radius:var(--rad);color:var(--foam);box-shadow:0 4px 20px rgba(0,0,0,.5)}
   .leaflet-popup-tip{background:var(--navy)}
   .leaflet-popup-content{margin:10px 14px;font-family:Georgia,serif}
@@ -75,7 +78,7 @@
     <div style="font-size:24px">⛵</div>
     <div>
       <div class="htitle">Tall Ships 2026 · Fleet Tracker</div>
-      <div class="hsub">NY Harbor · Live positions · Unofficial</div>
+      <div class="hsub">NY Harbor · Live AIS · Unofficial</div>
     </div>
   </div>
   <div class="hright">
@@ -114,7 +117,9 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const BBOX=[[40.40,-74.35],[41.00,-73.70]];
+// Wide bbox: covers all of NY Harbor, Sandy Hook, outer approaches, Long Island Sound
+const BBOX=[[40.20,-74.50],[41.20,-73.50]];
+
 const WL={
   "247999000":{name:"Amerigo Vespucci",flag:"🇮🇹",country:"Italy",type:"Full-Rigged Ship",boston:true},
   "261148000":{name:"Dar Mlodziezy",flag:"🇵🇱",country:"Poland",type:"Full-Rigged Ship",boston:true},
@@ -140,34 +145,44 @@ const WL={
   "367004000":{name:"Kalmar Nyckel",flag:"🇺🇸",country:"USA",type:"Pinnace",boston:true},
   "367066790":{name:"Elissa",flag:"🇺🇸",country:"USA",type:"Barque",boston:false},
 };
+
 const NAVS={0:"Under way",1:"At anchor",2:"Not under command",3:"Restricted",5:"Moored",7:"Fishing",8:"Sailing",15:"Default"};
+// Track which MMSIs have been seen via AIS
+const seen=new Set();
 let map,socket;
 const ships={};
+
 function initMap(){
-  map=L.map('map',{center:[40.690,-74.020],zoom:12});
+  map=L.map('map',{center:[40.700,-74.020],zoom:12});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(map);
   addPier(40.7720,-74.0021,'Pier 86\nIntrepid','#f0c96a');
   addPier(40.7063,-74.0035,'South Street\nSeaport','#aad4f0');
   addPier(40.6990,-74.0140,'Brooklyn\nBridge Park','#5dde8a');
   addPier(40.6290,-74.0740,'Staten Island\nWaterfront','#cc88ff');
+  addPier(40.7280,-74.0300,'Hoboken\nTerminal','#ff9966');
   map.on('click',closePanel);
 }
+
 function addPier(lat,lng,label,color){
   L.marker([lat,lng],{zIndexOffset:400,icon:L.divIcon({
     html:'<div style="background:rgba(13,33,55,.9);color:'+color+';font-size:9px;font-family:monospace;font-weight:bold;padding:3px 7px;border-radius:4px;border:1px solid '+color+';white-space:pre;line-height:1.4;box-shadow:0 2px 6px rgba(0,0,0,.5)">'+label+'</div>',
     className:'',iconAnchor:[0,0]})}).addTo(map);
 }
+
 function flyTo(lat,lng,zoom){map.flyTo([lat,lng],zoom,{duration:1});}
 function cps(d){return['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(d/22.5)%16];}
-function mkIcon(name,hdg,wl,flag){
+
+function mkIcon(name,hdg,wl,flag,isDark){
   const label=name.length>14?name.slice(0,13)+'…':name;
   const rot=(hdg!=null&&hdg<360)?hdg:0;
-  const arrowColor=wl?'#f0c96a':'#e8f4f8';
+  const arrowColor=isDark?'rgba(232,116,116,.5)':wl?'#f0c96a':'#e8f4f8';
+  const cls='ship-circle'+(wl?' wl':'')+(isDark?' dark':'');
   return L.divIcon({
-    html:'<div class="ship-circle'+(wl?' wl':'')+'">'+'<div style="position:absolute;top:-11px;left:50%;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid '+arrowColor+';transform:translateX(-50%) rotate('+rot+'deg);transform-origin:5px 21px"></div>'+'<span>'+flag+'</span><div class="ship-label">'+label+'</div></div>',
+    html:'<div class="'+cls+'"><div style="position:absolute;top:-11px;left:50%;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid '+arrowColor+';transform:translateX(-50%) rotate('+rot+'deg);transform-origin:5px 21px"></div><span>'+flag+'</span><div class="ship-label">'+label+'</div></div>',
     className:'',iconAnchor:[22,22],iconSize:[44,68],
   });
 }
+
 function updateShip(mmsi,lat,lng,spd,hdg,nav,rawName){
   const k=WL[mmsi];
   const name=k?k.name:(rawName&&rawName.trim()||'MMSI '+mmsi);
@@ -175,34 +190,46 @@ function updateShip(mmsi,lat,lng,spd,hdg,nav,rawName){
   const country=k?k.country:'Unknown';
   const type=k?k.type:'Vessel';
   const wl=!!k;
+  seen.add(mmsi);
+
   if(!ships[mmsi]){
-    const mk=L.marker([lat,lng],{icon:mkIcon(name,hdg,wl,flag),zIndexOffset:wl?300:100}).addTo(map);
+    const mk=L.marker([lat,lng],{icon:mkIcon(name,hdg,wl,flag,false),zIndexOffset:wl?300:100}).addTo(map);
     mk.bindPopup('<div class="pup-name">'+flag+' '+name+'</div><div class="pup-detail">'+country+' · '+type+'</div><div class="pup-tap">Tap for details →</div>');
     mk.on('click',function(ev){L.DomEvent.stopPropagation(ev);openPanel(mmsi);});
     ships[mmsi]={mk};
   }else{
     ships[mmsi].mk.setLatLng([lat,lng]);
-    ships[mmsi].mk.setIcon(mkIcon(name,hdg,wl,flag));
+    ships[mmsi].mk.setIcon(mkIcon(name,hdg,wl,flag,false));
   }
-  ships[mmsi].d={mmsi,name,flag,country,type,lat,lng,spd,hdg,nav,wl,boston:k?k.boston:false};
+  ships[mmsi].d={mmsi,name,flag,country,type,lat,lng,spd,hdg,nav,wl,boston:k?k.boston:false,lastSeen:Date.now()};
   const n=Object.keys(ships).length,w=Object.values(ships).filter(s=>s.d&&s.d.wl).length;
   document.getElementById('shipcount').textContent=w?(n+' ships · '+w+' tall ships'):(n+' ships');
 }
+
 function openPanel(mmsi){
   const s=ships[mmsi]&&ships[mmsi].d;if(!s)return;
   document.getElementById('pname').textContent=s.flag+' '+s.name;
   document.getElementById('pflag').textContent=s.country+' · '+s.type+' · MMSI '+s.mmsi;
-  document.getElementById('pstatus').textContent=NAVS[s.nav]||'Under way';
+  const navText=NAVS[s.nav]||'Under way';
+  const ageMin=Math.round((Date.now()-s.lastSeen)/60000);
+  document.getElementById('pstatus').textContent=navText+(ageMin>2?' · last seen '+ageMin+'m ago':'');
   document.getElementById('pspeed').innerHTML=(s.spd||0).toFixed(1)+'<span class="sunit">kn</span>';
   document.getElementById('phdg').innerHTML=(s.hdg!=null?s.hdg:'—')+'<span class="sunit">° '+(s.hdg!=null?cps(s.hdg):'')+' </span>';
   document.getElementById('pmmsi').textContent=s.mmsi;
   document.getElementById('ptype').textContent=s.type;
   const bl=document.getElementById('bostonlink');
-  bl.innerHTML=s.boston?'<div class="bostonbadge">⚓ Boston-bound · Departs NYC July 8</div>':'<div class="bostonbadge" style="background:rgba(74,158,202,.1);border-color:rgba(74,158,202,.4);color:var(--wake)">Staying in NY · Not Boston-bound</div>';
+  if(!seen.has(mmsi)){
+    bl.innerHTML='<div class="bostonbadge darkbadge">⚠ AIS not detected · May be transmitting intermittently</div>';
+  }else if(s.boston){
+    bl.innerHTML='<div class="bostonbadge">⚓ Boston-bound · Departs NYC July 8</div>';
+  }else{
+    bl.innerHTML='<div class="bostonbadge" style="background:rgba(74,158,202,.1);border-color:rgba(74,158,202,.4);color:var(--wake)">Staying in NY · Not Boston-bound</div>';
+  }
   document.getElementById('panel').classList.add('open');
   map.flyTo([s.lat,s.lng],14,{duration:1});
 }
 function closePanel(){document.getElementById('panel').classList.remove('open');}
+
 async function boot(){
   document.getElementById('loadmsg').textContent='Fetching live feed…';
   try{
@@ -218,12 +245,18 @@ async function boot(){
     console.error(e);
   }
 }
+
 function connect(key){
   const pill=document.getElementById('statuspill');
   pill.className='pill connecting';pill.textContent='● CONNECTING';
   const ws=new WebSocket('wss://stream.aisstream.io/v0/stream');
   ws.onopen=function(){
-    ws.send(JSON.stringify({Apikey:key,BoundingBoxes:[[BBOX[0],BBOX[1]]],FiltersShipMMSI:Object.keys(WL),FilterMessageTypes:['PositionReport','ShipStaticData']}));
+    ws.send(JSON.stringify({
+      Apikey:key,
+      BoundingBoxes:[[BBOX[0],BBOX[1]]],
+      FiltersShipMMSI:Object.keys(WL),
+      FilterMessageTypes:['PositionReport','ShipStaticData'],
+    }));
     pill.className='pill live';pill.textContent='● LIVE';
   };
   ws.onmessage=function(ev){
@@ -236,7 +269,9 @@ function connect(key){
         const hdg=p.TrueHeading<360?p.TrueHeading:p.Cog;
         const nav=p.NavigationalStatus;
         const name=(meta.ShipName||'').trim();
-        if(!WL[mmsi]&&spd<0.5)return;
+        // Watchlist ships: show regardless of speed (catches moored/anchored)
+        // Non-watchlist ships: only show if moving
+        if(!WL[mmsi]&&spd<1.0)return;
         if(!lat||!lng||lat===0||Math.abs(lat)>90)return;
         updateShip(mmsi,lat,lng,spd,hdg,nav,name);
       }
@@ -246,6 +281,7 @@ function connect(key){
   ws.onclose=function(){pill.className='pill error';pill.textContent='● RECONNECTING';setTimeout(function(){connect(key);},10000);};
   socket=ws;
 }
+
 boot();
 </script>
 </body>
