@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AIS Debug</title>
+<style>body{font-family:monospace;background:#0d2137;color:#e8f4f8;padding:20px}pre{background:#111;padding:12px;border-radius:6px;overflow-x:auto;font-size:12px;max-height:80vh;overflow-y:auto}h2{color:#f0c96a}button{background:#c8963e;color:#0d2137;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;font-weight:bold;margin-bottom:12px}</style>
+</head>
+<body>
+<h2>AIS Debug Console</h2>
+<button onclick="startTest()">Start Test</button>
+<p id="status" style="color:#4a9eca">Not started</p>
+<pre id="log">Waiting...</pre>
+<script>
+const BBOX=[[38.50,-77.00],[42.50,-69.50]];
+const TEST_MMSI=["760105000","224977000","303990000","261148000","263141000"];
+let msgCount=0;
+function log(msg,color){
+  const el=document.getElementById('log');
+  const line=document.createElement('div');
+  line.style.color=color||'#e8f4f8';
+  line.textContent='['+new Date().toISOString().slice(11,19)+'] '+msg;
+  el.appendChild(line);
+  el.scrollTop=el.scrollHeight;
+}
+async function startTest(){
+  document.getElementById('status').textContent='Fetching API key...';
+  log('Fetching key from /api/key...');
+  try{
+    const r=await fetch('/api/key');
+    log('Key fetch status: '+r.status,(r.ok?'#5dde8a':'#e87070'));
+    const data=await r.json();
+    if(data.key){
+      log('Key received: '+data.key.slice(0,8)+'... ('+data.key.length+' chars)','#5dde8a');
+      connect(data.key);
+    } else {
+      log('ERROR: No key in response: '+JSON.stringify(data),'#e87070');
+    }
+  }catch(e){
+    log('ERROR fetching key: '+e.message,'#e87070');
+  }
+}
+function connect(key){
+  log('Opening WebSocket to wss://stream.aisstream.io/v0/stream...');
+  document.getElementById('status').textContent='Connecting...';
+  const ws=new WebSocket('wss://stream.aisstream.io/v0/stream');
+  ws.onopen=function(){
+    log('WebSocket OPEN','#5dde8a');
+    const sub={
+      APIKey:key,
+      BoundingBoxes:[[BBOX[0],BBOX[1]]],
+      FiltersShipMMSI:TEST_MMSI,
+      FilterMessageTypes:['PositionReport','ShipStaticData']
+    };
+    log('Sending subscription: '+JSON.stringify(sub).slice(0,120)+'...','#f0c96a');
+    ws.send(JSON.stringify(sub));
+    document.getElementById('status').textContent='LIVE - waiting for messages...';
+    setTimeout(function(){
+      if(msgCount===0){
+        log('WARNING: No messages received after 30 seconds. Trying without MMSI filter...','#e87070');
+        const sub2={
+          APIKey:key,
+          BoundingBoxes:[[BBOX[0],BBOX[1]]],
+          FilterMessageTypes:['PositionReport']
+        };
+        log('Sending broad subscription (no MMSI filter): '+JSON.stringify(sub2),'#f0c96a');
+        ws.send(JSON.stringify(sub2));
+      }
+    },30000);
+  };
+  ws.onmessage=function(ev){
+    msgCount++;
+    try{
+      const msg=JSON.parse(ev.data);
+      const meta=msg.MetaData||{};
+      log('MSG #'+msgCount+' type='+msg.MessageType+' mmsi='+meta.MMSI+' name='+meta.ShipName+' lat='+meta.Latitude+' lng='+meta.Longitude,'#5dde8a');
+    }catch(e){
+      log('RAW: '+ev.data.slice(0,200),'#aaa');
+    }
+  };
+  ws.onerror=function(e){
+    log('WebSocket ERROR: '+JSON.stringify(e),'#e87070');
+    document.getElementById('status').textContent='ERROR';
+  };
+  ws.onclose=function(e){
+    log('WebSocket CLOSED code='+e.code+' reason='+e.reason,'#e87070');
+    document.getElementById('status').textContent='CLOSED';
+  };
+}
+</script>
+</body>
+</html>
